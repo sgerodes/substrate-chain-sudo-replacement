@@ -288,18 +288,31 @@ impl_runtime_apis! {
 		}
 	}
 
-	#[cfg(feature = "std")]
 	impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
 		fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
 			build_state::<RuntimeGenesisConfig>(config)
 		}
 
+		#[cfg(feature = "std")]
 		fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
 			get_preset::<RuntimeGenesisConfig>(id, crate::genesis_config_presets::get_preset)
 		}
 
+		#[cfg(not(feature = "std"))]
+		fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
+			// Use the same helper function as std version
+			get_preset::<RuntimeGenesisConfig>(id, crate::genesis_config_presets::get_preset)
+		}
+
+		#[cfg(feature = "std")]
+		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
+			crate::genesis_config_presets::preset_names()
+		}
+
+		#[cfg(not(feature = "std"))]
 		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
 			crate::genesis_config_presets::preset_names()
 		}
 	}
 }
+

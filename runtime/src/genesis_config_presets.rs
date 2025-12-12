@@ -15,20 +15,47 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{AccountId, BalancesConfig, RuntimeGenesisConfig, SudoConfig};
-use alloc::{vec, vec::Vec};
+use crate::{AccountId, BalancesConfig, RuntimeGenesisConfig, SudoConfig, Signature};
+use alloc::{format, vec, vec::Vec};
 use frame_support::build_struct_json_patch;
 use serde_json::Value;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_genesis_builder::{self, PresetId};
-use sp_keyring::Sr25519Keyring;
+use sp_core::{Pair, Public, sr25519};
+use sp_runtime::traits::{IdentifyAccount, Verify};
+
+type AccountPublic = <Signature as Verify>::Signer;
+
+/// Generate a crypto pair from seed.
+fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+	TPublic::Pair::from_string(&format!("//{}", seed), None)
+		.expect("static values are valid; qed")
+		.public()
+}
+
+/// Generate an account ID from seed.
+fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
+where
+	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+{
+	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+}
+
+/// Generate an Aura authority key.
+fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
+	(
+		get_from_seed::<AuraId>(s),
+		get_from_seed::<GrandpaId>(s),
+	)
+}
 
 // Returns the genesis config presets populated with given parameters.
 fn testnet_genesis(
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	endowed_accounts: Vec<AccountId>,
 	root: AccountId,
+	senate_members: Vec<AccountId>,
 ) -> Value {
 	build_struct_json_patch!(RuntimeGenesisConfig {
 		balances: BalancesConfig {
@@ -45,23 +72,30 @@ fn testnet_genesis(
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect::<Vec<_>>(),
 		},
 		sudo: SudoConfig { key: Some(root) },
+		senate: pallet_collective::GenesisConfig::<crate::Runtime, pallet_collective::Instance1> {
+			members: senate_members,
+			phantom: Default::default(),
+		},
 	})
 }
 
 /// Return the development genesis config.
 pub fn development_config_genesis() -> Value {
 	testnet_genesis(
-		vec![(
-			sp_keyring::Sr25519Keyring::Alice.public().into(),
-			sp_keyring::Ed25519Keyring::Alice.public().into(),
-		)],
+		vec![authority_keys_from_seed("Alice")],
 		vec![
-			Sr25519Keyring::Alice.to_account_id(),
-			Sr25519Keyring::Bob.to_account_id(),
-			Sr25519Keyring::AliceStash.to_account_id(),
-			Sr25519Keyring::BobStash.to_account_id(),
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 		],
-		sp_keyring::Sr25519Keyring::Alice.to_account_id(),
+		// Alice is sudo (root)
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		// Initialize Senate with Bob and Charlie as members (not Alice)
+		vec![
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+			get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		],
 	)
 }
 
@@ -69,20 +103,29 @@ pub fn development_config_genesis() -> Value {
 pub fn local_config_genesis() -> Value {
 	testnet_genesis(
 		vec![
-			(
-				sp_keyring::Sr25519Keyring::Alice.public().into(),
-				sp_keyring::Ed25519Keyring::Alice.public().into(),
-			),
-			(
-				sp_keyring::Sr25519Keyring::Bob.public().into(),
-				sp_keyring::Ed25519Keyring::Bob.public().into(),
-			),
+			authority_keys_from_seed("Alice"),
+			authority_keys_from_seed("Bob"),
 		],
-		Sr25519Keyring::iter()
-			.filter(|v| v != &Sr25519Keyring::One && v != &Sr25519Keyring::Two)
-			.map(|v| v.to_account_id())
-			.collect::<Vec<_>>(),
-		Sr25519Keyring::Alice.to_account_id(),
+		vec![
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+			get_account_id_from_seed::<sr25519::Public>("Charlie"),
+			get_account_id_from_seed::<sr25519::Public>("Dave"),
+			get_account_id_from_seed::<sr25519::Public>("Eve"),
+			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+			get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+			get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+		],
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		// Initialize Senate with Bob and Charlie as test members
+		vec![
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+			get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		],
 	)
 }
 
@@ -93,11 +136,11 @@ pub fn get_preset(id: &PresetId) -> Option<Vec<u8>> {
 		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET => local_config_genesis(),
 		_ => return None,
 	};
-	Some(
-		serde_json::to_string(&patch)
-			.expect("serialization to json is expected to work. qed.")
-			.into_bytes(),
-	)
+	// serde_json::to_string works with alloc feature in no_std
+	match serde_json::to_string(&patch) {
+		Ok(json) => Some(json.into_bytes()),
+		Err(_) => None,
+	}
 }
 
 /// List of supported presets.

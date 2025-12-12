@@ -68,6 +68,7 @@ frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-s
 
 pallet-aura = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2503", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2503", default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2503", default-features = false }
 pallet-grandpa = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2503", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2503", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2503", default-features = false }
