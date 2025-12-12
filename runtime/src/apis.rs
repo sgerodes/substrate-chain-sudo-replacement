@@ -288,6 +288,7 @@ impl_runtime_apis! {
 		}
 	}
 
+	#[cfg(feature = "std")]
 	impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
 		fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
 			build_state::<RuntimeGenesisConfig>(config)

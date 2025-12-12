@@ -25,6 +25,7 @@ pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
+#[cfg(feature = "std")]
 pub mod genesis_config_presets;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know

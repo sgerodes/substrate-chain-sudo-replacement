@@ -1,5 +1,0 @@
-[build]
-rustflags = ["--cfg", "feature=\"unsigned_is_multiple_of\""]
-
-[unstable]
-build-std = ["std", "panic_abort"] 
