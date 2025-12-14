@@ -1,5 +1,5 @@
 [workspace]
-members = ["node", "pallets/template", "runtime"]
+members = ["node", "pallets/senate-upgrade", "pallets/template", "runtime"]
 resolver = "2"
 
 [workspace.package]
@@ -45,6 +45,7 @@ zero-prefixed-literal = { level = "allow", priority = 2 }            # 00_1000_0
 solochain-template-runtime = { path = "./runtime" }
 # sg-node = { path = "./node" }
 
+pallet-senate-upgrade = { path = "./pallets/senate-upgrade", default-features = false }
 pallet-template = { path = "./pallets/template", default-features = false }
 
 clap = { version = "4.5.42", features = ["derive"] }

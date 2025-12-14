@@ -6022,6 +6022,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-senate-upgrade"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-collective",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-session"
 version = "40.0.1"
 source = "git+https://github.com/paritytech/polkadot-sdk.git?branch=stable2503#84cb9c985db445d1442ac807444e6f2de91fe704"
@@ -9542,6 +9557,7 @@ dependencies = [
  "pallet-balances",
  "pallet-collective",
  "pallet-grandpa",
+ "pallet-senate-upgrade",
  "pallet-sudo",
  "pallet-template",
  "pallet-timestamp",
