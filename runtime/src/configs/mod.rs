@@ -192,4 +192,5 @@ impl pallet_template::Config for Runtime {
 impl pallet_senate_upgrade::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_senate_upgrade::weights::SubstrateWeight<Runtime>;
+	type RuntimeCall = RuntimeCall;
 }

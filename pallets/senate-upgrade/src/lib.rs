@@ -14,10 +14,14 @@ pub use weights::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::WeightInfo;
+	use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
 	use frame_support::pallet_prelude::*;
+	use frame_support::traits::UnfilteredDispatchable;
 	use frame_system::pallet_prelude::*;
 	use frame_support::weights::Weight;
-		use alloc::vec::Vec;
+	use sp_runtime::traits::Dispatchable;
+	use sp_std::boxed::Box;
+	use alloc::vec::Vec;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -28,6 +32,11 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// A type representing the weights required by the dispatchables of this pallet.
 		type WeightInfo: WeightInfo;
+		/// Runtime call type so we can dispatch arbitrary calls as root.
+		type RuntimeCall: Parameter
+			+ Dispatchable<RuntimeOrigin = OriginFor<Self>, PostInfo = PostDispatchInfo>
+			+ GetDispatchInfo
+			+ UnfilteredDispatchable<RuntimeOrigin = OriginFor<Self>>;
 	}
 
 	#[pallet::event]
@@ -35,6 +44,8 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Senate has successfully performed a runtime upgrade.
 		RuntimeUpgradePerformed,
+		/// Senate dispatched a call as root.
+		DispatchedAsRoot,
 	}
 
 	#[pallet::error]
@@ -84,9 +95,30 @@ pub mod pallet {
 			// Consume the rest of the block to prevent further transactions
 			Ok(Some(Weight::MAX).into())
 		}
+
+		/// Allow the Senate to dispatch any runtime call with root origin.
+		#[pallet::call_index(1)]
+		#[pallet::weight({
+			// Charge the target call weight plus a small overhead.
+			let info = call.get_dispatch_info();
+			info.call_weight.saturating_add(T::WeightInfo::senate_dispatch_as_root())
+		})]
+		pub fn senate_dispatch_as_root(
+			origin: OriginFor<T>,
+			call: Box<<T as Config>::RuntimeCall>,
+		) -> DispatchResultWithPostInfo {
+			// Permit root directly, otherwise reject signed; allow other origins (collective Members).
+			match origin.as_system_ref() {
+				Some(frame_system::RawOrigin::Root) => {}
+				Some(frame_system::RawOrigin::Signed(_)) => return Err(Error::<T>::NotSenateOrigin.into()),
+				_ => {}
+			}
+
+			(*call).dispatch_bypass_filter(frame_system::RawOrigin::Root.into())?;
+			Self::deposit_event(Event::DispatchedAsRoot);
+			Ok(None.into())
+		}
 	}
-
-
 }
 
 pub use pallet::*;

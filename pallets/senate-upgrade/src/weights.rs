@@ -29,6 +29,7 @@ use core::marker::PhantomData;
 /// Weight functions for `pallet_senate_upgrade`.
 pub trait WeightInfo {
 	fn senate_set_code() -> Weight;
+	fn senate_dispatch_as_root() -> Weight;
 }
 
 /// Weights for pallet_senate_upgrade using the Substrate node and recommended hardware.
@@ -45,6 +46,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 		//  Minimum execution time: 100_000_000 nanoseconds.
 		Weight::from_parts(100_000_000, 0)
 			.saturating_add(Weight::from_parts(543, 0))
+	}
+
+	fn senate_dispatch_as_root() -> Weight {
+		// Minimal overhead; the inner call weight is charged separately.
+		Weight::from_parts(10_000_000, 0)
 	}
 }
 
