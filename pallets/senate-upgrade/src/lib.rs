@@ -20,8 +20,10 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use frame_support::weights::Weight;
 	use sp_runtime::traits::Dispatchable;
+	use pallet_collective::{RawOrigin as CollectiveOrigin, EnsureProportionAtLeast};
 	use sp_std::boxed::Box;
 	use alloc::vec::Vec;
+	use core::convert::TryInto;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -55,7 +57,12 @@ pub mod pallet {
 	}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
+	impl<T: Config> Pallet<T>
+	where
+		T::RuntimeOrigin: From<CollectiveOrigin<T::AccountId, pallet_collective::Instance1>>,
+		for<'a> &'a <<T as frame_system::Config>::RuntimeOrigin as OriginTrait>::PalletsOrigin:
+			TryInto<&'a CollectiveOrigin<T::AccountId, pallet_collective::Instance1>>,
+	{
 		/// Allow Senate collective to perform runtime upgrades.
 		/// This call accepts Senate origin (with majority vote) and internally calls System::set_code with root origin.
 		/// The Senate can propose this call through the collective, and when approved, it will execute.
@@ -65,25 +72,10 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			code: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
-			// This call is designed to be proposed by the Senate collective.
-			// When the collective executes a proposal, it uses RawOrigin::Members.
-			// We allow both root and Members origins (the collective will execute with Members).
-			// For simplicity, we just check that it's not a signed origin.
-			// The collective's voting mechanism ensures majority approval before execution.
-			
-			// Allow root or any non-signed origin (which includes Members from collective)
-			match origin.as_system_ref() {
-				Some(frame_system::RawOrigin::Root) => {
-					// Root can call this directly
-				},
-				Some(frame_system::RawOrigin::Signed(_)) => {
-					// Signed origins are not allowed - only root or collective
-					return Err(Error::<T>::NotSenateOrigin.into());
-				},
-				None | Some(_) => {
-					// This could be Members origin from collective - allow it
-					// The collective ensures majority vote before execution
-				},
+			// Allow root, otherwise require unanimous Senate (1/1).
+			if frame_system::EnsureRoot::<T::AccountId>::try_origin(origin.clone()).is_err() {
+				EnsureProportionAtLeast::<T::AccountId, pallet_collective::Instance1, 1, 1>::try_origin(origin)
+					.map_err(|_| Error::<T>::NotSenateOrigin)?;
 			}
 
 			// Call System::set_code with root origin - this will work because we're passing root
@@ -107,11 +99,10 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			call: Box<<T as Config>::RuntimeCall>,
 		) -> DispatchResultWithPostInfo {
-			// Permit root directly, otherwise reject signed; allow other origins (collective Members).
-			match origin.as_system_ref() {
-				Some(frame_system::RawOrigin::Root) => {}
-				Some(frame_system::RawOrigin::Signed(_)) => return Err(Error::<T>::NotSenateOrigin.into()),
-				_ => {}
+			// Allow root, otherwise require unanimous Senate (1/1).
+			if frame_system::EnsureRoot::<T::AccountId>::try_origin(origin.clone()).is_err() {
+				EnsureProportionAtLeast::<T::AccountId, pallet_collective::Instance1, 1, 1>::try_origin(origin)
+					.map_err(|_| Error::<T>::NotSenateOrigin)?;
 			}
 
 			(*call).dispatch_bypass_filter(frame_system::RawOrigin::Root.into())?;

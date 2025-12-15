@@ -87,15 +87,17 @@ pub fn development_config_genesis() -> Value {
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			get_account_id_from_seed::<sr25519::Public>("Bob"),
 			get_account_id_from_seed::<sr25519::Public>("Charlie"),
+			get_account_id_from_seed::<sr25519::Public>("Dave"),
 			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 		],
-		// Alice is sudo (root)
+		// sudo (root)
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		// Initialize Senate with Bob and Charlie as members (not Alice)
+		// Initialize Senate
 		vec![
 			get_account_id_from_seed::<sr25519::Public>("Bob"),
 			get_account_id_from_seed::<sr25519::Public>("Charlie"),
+			get_account_id_from_seed::<sr25519::Public>("Dave"),
 		],
 	)
 }
@@ -122,10 +124,11 @@ pub fn local_config_genesis() -> Value {
 			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		// Initialize Senate with Bob and Charlie as test members
+		// Initialize Senate with Bob, Charlie, and Dave as test members
 		vec![
 			get_account_id_from_seed::<sr25519::Public>("Bob"),
 			get_account_id_from_seed::<sr25519::Public>("Charlie"),
+			get_account_id_from_seed::<sr25519::Public>("Dave"),
 		],
 	)
 }
